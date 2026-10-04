@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="ClubFinder: find your school's clubs by name, keyword, type, or meeting day.">
+<title>ClubFinder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f4ef;--ink:#17223b;--mute:#5d6578;--card:#fff;--line:#dcd8cc;--accent:#ffb703;--accent-ink:#17223b;
+--academic:#2a6fdb;--community:#e0457b;--hobbies:#14a37f;--competition:#e8590c;--student:#7b4fd6;--team:#0b8fa8;--athletics:#b08900}
+@media(prefers-color-scheme:dark){:root{--bg:#10151f;--ink:#eef0f6;--mute:#9aa3b8;--card:#1a2130;--line:#2b3447}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+header{background:var(--ink);color:#fff;padding:56px 0 84px}
+@media(prefers-color-scheme:dark){header{background:#0a0e16}}
+h1{font-size:clamp(2.6rem,8vw,5rem);line-height:1;margin:0 0 12px;font-weight:800;letter-spacing:-.03em}
+header p{margin:0;font-size:1.2rem;max-width:34ch;color:#cfd5e6}
+.search{margin-top:-30px}
+.sbox{display:flex;align-items:center;gap:12px;background:var(--card);border:2px solid var(--ink);border-radius:16px;padding:6px 16px;box-shadow:6px 6px 0 var(--accent)}
+.sbox:focus-within{outline:3px solid var(--accent);outline-offset:3px}
+.sbox input{flex:1;border:0;background:none;font:inherit;font-size:1.15rem;color:var(--ink);padding:12px 0;min-width:0}
+.sbox input:focus{outline:none}
+.sbox button{border:0;background:none;color:var(--mute);font:inherit;cursor:pointer;padding:6px}
+.filters{display:flex;flex-wrap:wrap;gap:8px 20px;margin:22px 0 8px;align-items:center}
+.group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.group b{font-size:.9rem;color:var(--mute);font-weight:600;margin-right:2px}
+.chip{border:1.5px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-size:.9rem;padding:5px 13px;border-radius:99px;cursor:pointer}
+.chip:hover{border-color:var(--ink)}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+@media(prefers-color-scheme:dark){.chip[aria-pressed=true]{background:var(--accent);color:#17223b;border-color:var(--accent)}}
+.chip:focus-visible,.card a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.count{margin:14px 0;color:var(--mute);font-size:.95rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;padding-bottom:60px}
+.card{background:var(--card);border:1.5px solid var(--line);border-left:8px solid var(--c);border-radius:6px 14px 14px 6px;padding:18px 18px 16px}
+.card h2{font-size:1.2rem;line-height:1.2;margin:0 0 8px;font-weight:800}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tag{font-size:.8rem;padding:2px 10px;border-radius:99px;border:1.5px solid var(--c);color:var(--c);font-weight:600}
+.tag.asb{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.tag.soc{border-color:var(--mute);color:var(--mute)}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.93rem}
+dt{color:var(--mute)}dd{margin:0;overflow-wrap:anywhere}
+.card a{color:inherit;text-decoration-color:var(--c);text-underline-offset:3px}
+.empty{grid-column:1/-1;text-align:center;padding:50px 10px;color:var(--mute)}
+footer{border-top:1px solid var(--line);padding:24px 0;color:var(--mute);font-size:.9rem}
+@media(prefers-reduced-motion:no-preference){.card{transition:transform .15s}.card:hover{transform:translateY(-3px)}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>ClubFinder</h1>
+<p>Find your hobby, your community, your next obsession.</p>
+</div></header>
+
+<main class="wrap">
+<div class="search"><label class="sbox"><span aria-hidden="true">🔍</span>
+<input id="q" type="search" placeholder="Search by name or keyword: coding, music, debate, Tuesday..." aria-label="Search clubs" autocomplete="off">
+<button id="clear" type="button" hidden aria-label="Clear search">✕</button></label></div>
+
+<div class="filters" id="filters"></div>
+<div class="count" id="count" aria-live="polite"></div>
+<div class="grid" id="grid"></div>
+</main>
+
+<footer><div class="wrap">Club info is from the 2026-2027 club master list. Meeting rooms and days can change, so check with the club contact.</div></footer>
+
+<script>
+// name|ASB or Social|type|officers|contact|room|meeting day/time|sponsor|keywords
+const DATA=`AI/ML (Artificial Intelligence / Machine Learning)|Social|Academic|Calvin Hung|calvin.s.hung715@gmail.com|C201|Monday|Vahlstrom|coding computers technology programming
+Animal Welfare Society|ASB|Community|Elise de Hart|elise.dehart@wccschools.org|B204|Wednesday|Trott|pets volunteer shelter dogs cats
+Art Club|ASB|Hobbies|Teagan Kelly|teagan.kelly2@wccschools.org|F105|Every other Friday|Jun|drawing painting creative
+Asian Pacific Islander Student Union|ASB|Student Union|Fiona Robinson|fiona.robinson@wccschools.org|C208|Thursday|Huy|APISU culture asian heritage
+AYouth (Hack Club)|ASB|Community|Rafi Brenman|rafael.brenman@wccschools.org|C205|Monday (TBD)|Mudalige|coding hackathon programming computers
+Badminton Club|Social|Competition|Anabella Tse|anabella.tse@wccschools.org|Gym|Monday and Thursday|Huy|sports racket
+Birding Club|Social|Hobbies|Claire Connallon|echsbirdingclub@gmail.com|C203|Thursday|Krieger|birds nature outdoors
+Black Student Union|ASB|Student Union|Devin Gibson|devin.gibson@wccschools.org|F105|Friday|Jun|BSU culture heritage
+Business and Entrepreneurship Club|ASB|Academic|Jason Chen|jason.chen@wccschools.org|C102|Tuesday|Mangum|startup money finance marketing
+Car Club|Social|Hobbies|Rafael Brenman|rafael.brenman@wccschools.org|B108|Monday|Jepson|cars automotive engines
+Culinary Club|ASB|Hobbies|Sierra Smith|culinary.club45@gmail.com|D203|Every other Wednesday|Choi|cooking baking food
+Democratic Student Union|ASB|Student Union|Isla Marvin|echs.democrats25@gmail.com|D202|Monday|Jimenez|politics government democrats
+DnD Club|Social|Hobbies|Skyeler Dinwoodie|skyeler.dinwoodie@wccschools.org|B208|Friday|Roddie|dungeons dragons tabletop games roleplaying
+Dragon Boat Club|Social|Team|Daniel Zhou|adriana.lopez@wccschools.org, dhwani.chandran@wccschools.org|Berkeley Marina Dock|Mon-Wed, Fri, Sat (4:30-6:00 pm, 10:00 am-12:00 pm)|Pang|paddling rowing water sports
+Empowered Youth|ASB|Community|Maxwell Minor|empower3dyouth@gmail.com|Library|Tuesday|Burnham|leadership service
+Fashion's Facade|Social|Community|Sasha Hahn|contact@fashionsfacade.org|D202|Monday|Sloan|fashion clothing style design
+Feminist Club|ASB|Community|Lucy Kross|lucy.kross@wccschools.org|B206|Wednesday|McGrath|women gender equality
+Film and Photography Club|Social|Community|Evan Dea|photoechs@gmail.com|D105|Wednesday|Jraige|movies cameras photos creative
+Fishing Club|Social|Hobbies|Finley Redig|echsfishingclub@gmail.com|C205|Thursday|Buchanan|outdoors nature
+Flag Club|ASB|Team|Brice Umoru|elcerritoflagsquad@gmail.com, lollano@wccusd.net|D101|Tuesday, Thursday (after school)|Ollano|color guard performance
+Flag Football|ASB|Team|Zhane Giles|zhane.giles@wccschools.org|Softball field|Every day except Friday, 4-6 pm|Guevara|sports football
+French Club|Social|Academic|Julie Perrodin|julie.perrodin@wccschools.org|C105|Monday|Tindol|language france
+French Honor Society|ASB|Student Union|Josephine Cocking Lucy|josephine.cockingl@wccschools.org|C105|Tuesday|Tindol|language france honors
+Garden Club|Social|Community|Leah Sundstrom|leah.sundstrom@wccschools.org|Garden|Tuesday|Jraige|plants outdoors nature
+Gaucho Dance Company|ASB|Team|Tenzin Wesar|tenzin.wesar@wccschools.org, jkronenberg@wccusd.net|Dance Studio|Tuesday|Kronenberg|dancing performance
+Gender Sexuality Alliance|ASB|Student Union|Helen Feeney|elcerrito.gsa@gmail.com|B208|Tuesday|Roddie|GSA lgbtq queer pride
+Hacky Sack Club|Social|Hobbies|Owen Miller|owen.miller@wccschools.org|D203|Thursday|Choi|footbag juggling games
+Hillside Club|ASB|Community|Miro Mikaelian|echshillsideclub@gmail.com|C105|Last Friday of the month|Tindol|hiking nature
+Himalayan Club|Social|Community|TBD|echs.himalayan@gmail.com, tenzin.wesar@wccschools.org|D101|Every other Wednesday|Ollano & Matlock|culture nepal tibet
+History and Heritage Club|Social|Academic|Elizabeth Patusco|elizabeth.patusco@wccschools.org|B204|Every other Wednesday|Trott|history culture
+Japanese Club|Social|Academic|Tetsuya Shiozaki|tetsuya.shiozaki@wccschools.org|C107|Wednesday|Greninger|language japan anime culture
+Jewish Student Union|ASB|Student Union|Arlo Helman, Jonah Vlahos|arlo.helman@wccschools.org|D102|Friday|Matlock|JSU culture religion
+Juggling Club|Social|Hobbies|Lawrence Wong|lawrence.wong@wccschools.org|D201|Tuesday|Bliss|balls games
+Key Club|ASB|Community|Anabella Tse|anabella.tse@wccschools.org|D203|Friday|Choi|volunteer service community service
+Latino Student Union|ASB|Student Union|Lidia Laguardia|echslatinostudentunion@gmail.com|C102|Every other Wednesday|Mangum|LSU culture heritage
+Mahjong Club|Social|Hobbies|Victor Petersen|victor.petersen2@wccschools.org|D203|Thursday|Choi|tiles board games
+Mock Trial|ASB|Competition|Emely Ortega Molina|emely.ortegamolina@wccschools.org|C202|Tuesday|Ferber|law lawyer court debate
+Model United Nations|ASB|Competition|Maxwell Minor|maxwell.minor@wccschools.org|D202|Wednesday|Jimenez|MUN debate politics diplomacy
+Mountain Biking Club|Social|Team|Evie O'Neal|evie.oneal@wccschools.org|EC Rec Center / ECHS|Tue, Wed, Fri, Sun|Huy|bikes cycling outdoors sports
+Music Review Club|Social|Hobbies|Jake Lee|jake.lee@wccschools.org|B108|Tuesday|Jepson|songs albums listening
+Muslim Student Association (MSA)|ASB|Student Union|Hooria Laeeq|echsmsa101@gmail.com|C101|Wednesday|Reyes|religion islam culture
+National Honor Society|ASB|Student Union|Elise de Hart, Lidia Laguardia|lidia.laguardia2@wccschools.org, elise.dehart@wccschools.org|Library|Friday|Burnham|NHS honors service academics
+Nutrition Club|Social|Academic|Andrea Ortiz|nutritionclub86@gmail.com|B205|Wednesday|Fleeman|health food wellness
+P7 Bible Study|Social|Community|Cristian Duran|cristian.duran@wccschools.org|D201|Thursday|Bliss|religion christian faith
+People Believing in Jesus (PBJ)|Social|Community|Andres Hernandez Sandoval|andres.hernandezsa@wccschools.org|C302|Tuesday|Tolentino|religion christian faith
+Physics Club|Social|Academic|Neil Cooney|echsphysicsclub@gmail.com|D202|Tuesday|Sloan|science stem
+Red Cross|ASB|Community|Antonio Shapland|antonio.shapland@wccschools.org|C101|Monday|Reyes|volunteer first aid service health
+Robotics Club|ASB|Competition|Calvin Hung|calvin.s.hung715@gmail.com|C208|Wednesday|Huy|engineering stem coding building
+SAT Study Club|Social|Academic|Ezra Helman|ezra.helman@wccschools.org|D103|Tuesday|Pang|test prep college studying
+Science Olympiad|ASB|Competition|Ben Quon|ben.quon@wccschools.org|B304|Tuesday|Marrochio|stem science competition
+Seeds|Social|Community|Sasha Hahn|seedswccusd@gmail.com|D102|Wednesday|Matlock|environment sustainability
+Sexual Assault Awareness Club|ASB|Community|Fiona Robinson|fiona.robinson@wccschools.org|B202|Every other Tuesday|Mowry|advocacy support awareness
+Social Tennis Club|Social|Athletics|Mateo Vera|elcerrito.socialtennisclub@gmail.com|School tennis courts|Friday (3:30 pm)|Harper|sports racket
+Speech and Debate|ASB|Competition|Sasha Hahn|ecforensics@gmail.com|C208|Monday and Wednesday (after school)|Huy|forensics public speaking
+Spikeball Club|Social|Athletics|Gabriella Larochette|gabriella.larochet@wccschools.org|Vista Park|Wednesday (3 pm)|Quoc|sports games outdoors
+Student Athlete Union|ASB|Student Union|Evie O'Neal|echsstudentathletes@gmail.com|C105|Thursday|Tindol|sports athletes
+Student Athlete Tutoring Club (SATC)|Social|Community|Connor Chin|connor.chin@wccschools.org|D102|Tuesday|Matlock|tutoring homework help
+Students for Humanity|Social|Community|Ella Cappello|ella.cappelo@wccschools.org|D202|Tuesday|Jimenez|service charity
+Sweep For Change|ASB|Community|Hannan Chang|hannan.chang@wccschools.org|B108|Every other Wednesday|Jepson|cleanup environment service
+The Gaucho Review|Social|Academic|Corwin Gauna, Natalie Rosenfeld|corwin.gauna@wccschools.org|B108|Thursday|Jepson|writing literary magazine poetry
+Thespian Society|ASB|Team|James Takano|james.takano@wccschools.org|B106|Thursday|Decker|theater drama acting plays
+Tibetan Student Union|ASB|Student Union|Sonam Bhonjatsang|echstsu@gmail.com|C204|Every other Wednesday|Tianero|TSU culture heritage
+Trail Club|Social|Athletics|Akhil Iyer|ectrailclub@gmail.com|C301|Thursday|Quoc|hiking running outdoors
+Ultimate Frisbee (Women's)|ASB|Team|Eleanora Draut|sevan.markarian@wccschools.org|C203|Tuesday|Krieger|sports frisbee
+Video Production Club|Social|Hobbies|Nicole Diniz|nicole.diniz@wccschools.org|A231|Wednesday and Friday|Wheat|film editing youtube
+Volleyball Club|Social|Team|Grant Reed|grant.reed@wccschools.org|Gym|Tuesday and Thursday|Tianero|sports
+ASL Club|Social|Community|Emmeline Russell|emmeline.russell@wccschools.org|D104|Thursday|Guevara|sign language deaf
+Radio Club|ASB|Community|Simha Sailam|simha.sailam@wccschools.org|B200|Monday and Friday|Wheat|podcast broadcasting music
+Women in Sports Empowerment|ASB|Community|Ella Cappello|ella.cappelo@wccschools.org|D202|Friday|Sloan|athletes girls sports
+Chess Club|Social|Hobbies|Swapnil Newpani||TBD|TBD||board games strategy`.split("\n").map(l=>{const f=l.split("|");return{name:f[0],grp:f[1],type:f[2],who:f[3],mail:f[4],room:f[5],when:f[6],sponsor:f[7],kw:f[8]}});
+
+const COLORS={Academic:"--academic",Community:"--community",Hobbies:"--hobbies",Competition:"--competition","Student Union":"--student",Team:"--team",Athletics:"--athletics"};
+const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const dayOf=c=>DAYS.filter(d=>new RegExp(d,"i").test(c.when)||(d=="Mon"&&/Mon-Wed/.test(c.when))||(d=="Tue"&&/Mon-Wed/.test(c.when))||(d=="Wed"&&/Mon-Wed/.test(c.when))||(d=="Tue"&&/Every day/.test(c.when)));
+const esc=s=>String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+DATA.forEach(c=>{c.days=dayOf(c);if(/Every day except Friday/.test(c.when))c.days=["Mon","Tue","Wed","Thu","Sat","Sun"].slice(0,4);c.hay=[c.name,c.type,c.grp,c.who,c.room,c.when,c.sponsor,c.kw,c.days.join(" ")].join(" ").toLowerCase()});
+
+const S={q:"",type:"All",grp:"All",day:"All"};
+const $=id=>document.getElementById(id);
+const types=["All",...Object.keys(COLORS)];
+function chips(label,key,opts){return `<div class="group"><b>${label}</b>${opts.map(o=>`<button class="chip" type="button" data-k="${key}" data-v="${o}" aria-pressed="${S[key]===o}">${o}</button>`).join("")}</div>`}
+function drawFilters(){$("filters").innerHTML=chips("Type","type",types)+chips("Group","grp",["All","ASB","Social"])+chips("Day","day",["All",...DAYS])}
+function card(c){const col=`var(${COLORS[c.type]||"--mute"})`;
+const mails=c.mail?c.mail.split(/[ ,]+/).filter(Boolean).map(m=>`<a href="mailto:${esc(m)}">${esc(m)}</a>`).join("<br>"):"TBD";
+return `<article class="card" style="--c:${col}"><h2>${esc(c.name)}</h2>
+<div class="tags"><span class="tag">${esc(c.type)}</span><span class="tag ${c.grp=="ASB"?"asb":"soc"}">${esc(c.grp)}</span></div>
+<dl><dt>When</dt><dd>${esc(c.when)}</dd><dt>Where</dt><dd>${esc(c.room)}</dd><dt>Officers</dt><dd>${esc(c.who)}</dd><dt>Sponsor</dt><dd>${esc(c.sponsor||"TBD")}</dd><dt>Contact</dt><dd>${mails}</dd></dl></article>`}
+function render(){
+const words=S.q.toLowerCase().split(/\s+/).filter(Boolean);
+const out=DATA.filter(c=>(S.type=="All"||c.type==S.type)&&(S.grp=="All"||c.grp==S.grp)&&(S.day=="All"||c.days.includes(S.day))&&words.every(w=>c.hay.includes(w)));
+$("count").textContent=`${out.length} of ${DATA.length} clubs`;
+$("grid").innerHTML=out.length?out.map(card).join(""):`<div class="empty"><p><b>No clubs match that search.</b></p><p>Try a shorter keyword or clear a filter.</p></div>`;
+$("clear").hidden=!S.q}
+$("q").addEventListener("input",e=>{S.q=e.target.value;render()});
+$("clear").addEventListener("click",()=>{S.q="";$("q").value="";$("q").focus();render()});
+$("filters").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;S[b.dataset.k]=b.dataset.v;drawFilters();render()});
+drawFilters();render();
+</script>
+</body>
+</html>
